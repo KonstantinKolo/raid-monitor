@@ -13,7 +13,13 @@ public class RaidService
 
     public async Task<SmartInfo> GetSmartInfoAsync(string device)
     {
-        var output = await RunCommandAsync("smartctl", $"-a /dev/{device}");
+        // Try standard SMART first
+        var output = await RunCommandAsync("/usr/sbin/smartctl", $"-a /dev/{device}");
+
+        // If it complains about USB bridge, fall back to -d scsi
+        if (output.Contains("Unknown USB bridge") || output.Contains("specify device type"))
+            output = await RunCommandAsync("/usr/sbin/smartctl", $"-a -d scsi /dev/{device}");
+
         return SmartctlParser.Parse(device, output);
     }
 

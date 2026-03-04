@@ -80,4 +80,48 @@ public class SmartctlParserTests
         Assert.False(result.IsHealthy);
         Assert.Equal(0, result.Temperature);
     }
+
+    private const string UsbEnclosureDrive = """
+    /dev/sda: Unknown USB bridge [0x2109:0x0561 (0x002)]
+    Product:              Unionsine0USB3.0
+    Serial number:        ED2025070500E1
+    User Capacity:        2,000,398,934,016 bytes [2.00 TB]
+    SMART support is:     Unavailable - device lacks SMART capability.
+    Current Drive Temperature:     0 C
+    """;
+
+    [Fact]
+    public void Parse_UsbEnclosure_IsUsbEnclosureTrue()
+    {
+        var result = SmartctlParser.Parse("sda", UsbEnclosureDrive);
+        Assert.True(result.IsUsbEnclosure);
+    }
+
+    [Fact]
+    public void Parse_UsbEnclosure_HasLimitationNote()
+    {
+        var result = SmartctlParser.Parse("sda", UsbEnclosureDrive);
+        Assert.False(string.IsNullOrEmpty(result.LimitationNote));
+    }
+
+    [Fact]
+    public void Parse_UsbEnclosure_ParsesSerialNumber()
+    {
+        var result = SmartctlParser.Parse("sda", UsbEnclosureDrive);
+        Assert.Equal("ED2025070500E1", result.SerialNumber);
+    }
+
+    [Fact]
+    public void Parse_UsbEnclosure_ParsesCapacity()
+    {
+        var result = SmartctlParser.Parse("sda", UsbEnclosureDrive);
+        Assert.Equal("2.00 TB", result.Capacity);
+    }
+
+    [Fact]
+    public void Parse_UsbEnclosure_AssumedHealthy()
+    {
+        var result = SmartctlParser.Parse("sda", UsbEnclosureDrive);
+        Assert.True(result.IsHealthy);
+    }
 }

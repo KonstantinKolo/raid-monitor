@@ -7,5 +7,9 @@ public class SmartInfo
     public int Temperature { get; set; }
     public int ReallocatedSectors { get; set; }
     public int PowerOnHours { get; set; }
-    public string OverallHealth { get; set; } = ""; // PASSED / FAILED
+    public string OverallHealth { get; set; } = "";
+    public bool IsUsbEnclosure { get; set; }
+    public string? SerialNumber { get; set; }
+    public string? Capacity { get; set; }
+    public string LimitationNote { get; set; } = "";
 }
