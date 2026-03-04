@@ -1,0 +1,6 @@
+@RaidMonitor.Api_HostAddress = http://localhost:5291
+
+GET {{RaidMonitor.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

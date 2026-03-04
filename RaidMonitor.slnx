@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="RaidMonitor.Api/RaidMonitor.Api.csproj" />
+  <Project Path="RaidMonitor.Core/RaidMonitor.Core.csproj" />
+  <Project Path="RaidMonitor.Tests/RaidMonitor.Tests.csproj" />
+  <Project Path="RaidMonitor.Web/RaidMonitor.Web.csproj" />
+</Solution>
