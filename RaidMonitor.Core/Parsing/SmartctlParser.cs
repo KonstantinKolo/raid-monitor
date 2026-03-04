@@ -1,5 +1,6 @@
 using RaidMonitor.Core.Models;
 using System.Text.RegularExpressions;
+using System.Linq;
 
 namespace RaidMonitor.Core.Parsing;
 
@@ -16,7 +17,7 @@ public static class SmartctlParser
             info.IsHealthy = true; // assume healthy if no explicit failure
         }
 
-        foreach (var line in smartctlOutput.Split('\n'))
+        foreach (var line in smartctlOutput.Split('\n').Select(l => l.Trim()))
         {
             var healthMatch = Regex.Match(line,
                 @"SMART overall-health self-assessment test result:\s+(\w+)");
@@ -54,6 +55,30 @@ public static class SmartctlParser
                 @"User Capacity:\s+([\d,]+) bytes \[(.+?)\]");
             if (capacityMatch.Success)
                 info.Capacity = capacityMatch.Groups[2].Value;
+            
+            var productMatch = Regex.Match(line, @"Product:\s+(\S+.*)");
+            if (productMatch.Success)
+                info.ProductName = productMatch.Groups[1].Value.Trim();
+
+           var formMatch = Regex.Match(line, @"Form Factor:\s+(.+)");
+            if (formMatch.Success)
+                info.FormFactor = formMatch.Groups[1].Value.Trim();
+
+            var luidMatch = Regex.Match(line, @"Logical Unit id:\s+(\S+)");
+            if (luidMatch.Success)
+                info.LogicalUnitId = luidMatch.Groups[1].Value.Trim();
+
+            var readCacheMatch = Regex.Match(line, @"Read Cache is:\s+(\w+)");
+            if (readCacheMatch.Success)
+                info.ReadCacheEnabled = readCacheMatch.Groups[1].Value == "Enabled";
+
+            var writeCacheMatch = Regex.Match(line, @"Writeback Cache is:\s+(\w+)");
+            if (writeCacheMatch.Success)
+                info.WriteCacheEnabled = writeCacheMatch.Groups[1].Value == "Enabled";
+
+            var blockMatch = Regex.Match(line, @"Logical block size:\s+(\d+ bytes)");
+            if (blockMatch.Success)
+                info.BlockSize = blockMatch.Groups[1].Value.Trim();
         }
 
         return info;

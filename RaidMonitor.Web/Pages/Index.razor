@@ -1,0 +1,788 @@
+@page "/"
+@using MudBlazor
+@using RaidMonitor.Core.Models
+@inject HttpClient Http
+
+<PageTitle>RAID Monitor</PageTitle>
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+    .raid-root {
+        font-family: 'Space Grotesk', sans-serif;
+        background: #0a0a0f;
+        min-height: 100vh;
+        padding: 24px;
+    }
+
+    .status-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 20px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 8px;
+        margin-bottom: 28px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: #555;
+        letter-spacing: 0.08em;
+    }
+
+    .status-bar .dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: #00ff88;
+        box-shadow: 0 0 8px #00ff88;
+        animation: pulse-green 2s infinite;
+        display: inline-block;
+        margin-right: 8px;
+    }
+
+    @@keyframes pulse-green {
+        0%, 100% { opacity: 1; box-shadow: 0 0 8px #00ff88; }
+        50% { opacity: 0.5; box-shadow: 0 0 3px #00ff88; }
+    }
+
+    .array-card {
+        background: #0f0f17;
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 12px;
+        padding: 28px;
+        margin-bottom: 24px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .array-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(0,255,136,0.4), transparent);
+    }
+
+    .array-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 24px;
+    }
+
+    .array-name {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 22px;
+        font-weight: 700;
+        color: #fff;
+        letter-spacing: -0.02em;
+    }
+
+    .array-meta {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: #444;
+        margin-top: 4px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .state-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+
+    .state-active {
+        background: rgba(0,255,136,0.08);
+        border: 1px solid rgba(0,255,136,0.25);
+        color: #00ff88;
+    }
+
+    .state-degraded {
+        background: rgba(255,59,59,0.08);
+        border: 1px solid rgba(255,59,59,0.3);
+        color: #ff3b3b;
+    }
+
+    .state-recovering {
+        background: rgba(255,168,0,0.08);
+        border: 1px solid rgba(255,168,0,0.3);
+        color: #ffa800;
+    }
+
+    .state-dot {
+        width: 5px; height: 5px;
+        border-radius: 50%;
+        background: currentColor;
+        animation: pulse-dot 2s infinite;
+    }
+
+    @@keyframes pulse-dot {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
+
+    .section-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: #333;
+        margin-bottom: 12px;
+    }
+
+    .drives-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+
+    .drive-card {
+        background: #0a0a0f;
+        border-radius: 10px;
+        padding: 16px;
+        position: relative;
+        transition: border-color 0.2s, transform 0.15s;
+    }
+
+    .drive-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .drive-active {
+        border: 1px solid rgba(0,255,136,0.2);
+    }
+
+    .drive-active:hover {
+        border-color: rgba(0,255,136,0.45);
+    }
+
+    .drive-faulty {
+        border: 1px solid rgba(255,59,59,0.35);
+        background: rgba(255,59,59,0.03);
+    }
+
+    .drive-spare {
+        border: 1px solid rgba(255,168,0,0.2);
+    }
+
+    .drive-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .drive-indicator {
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .indicator-active {
+        background: #00ff88;
+        box-shadow: 0 0 8px rgba(0,255,136,0.6);
+        animation: pulse-green 2.5s infinite;
+    }
+
+    .indicator-faulty {
+        background: #ff3b3b;
+        box-shadow: 0 0 8px rgba(255,59,59,0.6);
+    }
+
+    .indicator-spare {
+        background: #ffa800;
+        box-shadow: 0 0 8px rgba(255,168,0,0.5);
+    }
+
+    .drive-name {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px;
+        font-weight: 700;
+        color: #e0e0e0;
+    }
+
+    .drive-status-text {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 9px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        margin-left: auto;
+    }
+
+    .text-active { color: #00ff88; }
+    .text-faulty { color: #ff3b3b; }
+    .text-spare  { color: #ffa800; }
+
+    .drive-divider {
+        height: 1px;
+        background: rgba(255,255,255,0.05);
+        margin: 10px 0;
+    }
+
+    .drive-stat {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 5px;
+    }
+
+    .stat-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 9px;
+        color: #333;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+
+    .stat-value {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: #888;
+        font-weight: 600;
+    }
+
+    .usb-badge {
+        display: inline-block;
+        padding: 2px 7px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 4px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 9px;
+        color: #444;
+        letter-spacing: 0.1em;
+        margin-top: 4px;
+    }
+
+    .rebuild-section {
+        margin-top: 8px;
+        padding: 16px;
+        background: rgba(255,168,0,0.03);
+        border: 1px solid rgba(255,168,0,0.12);
+        border-radius: 8px;
+    }
+
+    .rebuild-label {
+        display: flex;
+        justify-content: space-between;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        color: #ffa800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+    }
+
+    .rebuild-bar-bg {
+        height: 4px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+
+    .rebuild-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #ffa800, #ffcc55);
+        border-radius: 2px;
+        transition: width 0.5s ease;
+        box-shadow: 0 0 8px rgba(255,168,0,0.4);
+    }
+
+    .rebuild-stats {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 8px;
+    }
+
+    .rebuild-stat {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 9px;
+        color: #555;
+        letter-spacing: 0.08em;
+    }
+
+    .drive-card { cursor: pointer; }
+
+    .detail-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.7);
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+        animation: fadeIn 0.15s ease;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .detail-panel {
+        background: #0f0f17;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 14px;
+        padding: 28px;
+        width: 480px;
+        max-width: 90vw;
+        max-height: 85vh;
+        overflow-y: auto;
+        position: relative;
+        animation: slideUp 0.2s ease;
+    }
+
+    @@keyframes slideUp {
+        from { transform: translateY(16px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    .detail-panel::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(0,255,136,0.5), transparent);
+        border-radius: 14px 14px 0 0;
+    }
+
+    .detail-title {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 20px;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 4px;
+    }
+
+    .detail-subtitle {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        color: #444;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 24px;
+    }
+
+    .detail-section { margin-bottom: 20px; }
+
+    .detail-section-title {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: #333;
+        margin-bottom: 10px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 7px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+
+    .detail-row:last-child { border-bottom: none; }
+
+    .detail-key {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        color: #444;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .detail-val {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: #ccc;
+        font-weight: 600;
+        text-align: right;
+    }
+
+    .detail-close {
+        position: absolute;
+        top: 20px; right: 20px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 6px;
+        color: #555;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        padding: 4px 10px;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .detail-close:hover {
+        background: rgba(255,255,255,0.08);
+        color: #fff;
+    }
+
+    .health-good { color: #00ff88; }
+    .health-warn { color: #ffa800; }
+    .health-bad  { color: #ff3b3b; }
+</style>
+
+<div class="raid-root">
+
+    <div class="status-bar">
+        <span>
+            <span class="dot"></span>
+            RAID MONITOR · ONLINE
+        </span>
+        <span>LAST UPDATED @_lastUpdated.ToString("HH:mm:ss")</span>
+        <span>@_arrays.Count ARRAY@(_arrays.Count != 1 ? "S" : "") DETECTED</span>
+    </div>
+
+    @if (_loading)
+    {
+        <div style="display:flex;justify-content:center;align-items:center;height:300px;flex-direction:column;gap:16px;">
+            <MudProgressCircular Color="Color.Success" Indeterminate="true" Size="Size.Large" />
+            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#333;letter-spacing:0.15em;">
+                READING RAID STATE...
+            </span>
+        </div>
+    }
+    else if (_error != null)
+    {
+        <div style="padding:20px;background:rgba(255,59,59,0.05);border:1px solid rgba(255,59,59,0.2);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#ff3b3b;">
+            ERROR: @_error
+        </div>
+    }
+    else if (_arrays.Count == 0)
+    {
+        <div style="padding:20px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#444;text-align:center;">
+            NO RAID ARRAYS DETECTED
+        </div>
+    }
+    else
+    {
+        @foreach (var array in _arrays)
+        {
+            <div class="array-card">
+                <div class="array-header">
+                    <div>
+                        <div class="array-name">/dev/@array.Name</div>
+                        <div class="array-meta">@array.RaidLevel.ToUpper() &nbsp;·&nbsp; @array.Disks.Count DRIVES &nbsp;·&nbsp; SOFTWARE RAID</div>
+                    </div>
+                    <div class="state-badge @GetStateBadgeClass(array.State)">
+                        <span class="state-dot"></span>
+                        @array.State.ToUpper()
+                    </div>
+                </div>
+
+                <div class="section-label">── Drive Status</div>
+                <div class="drives-grid">
+                    @foreach (var disk in array.Disks)
+                    {
+                        <div class="drive-card @GetDriveCardClass(disk)" @onclick="() => OpenDetail(disk)">
+                            <div class="drive-header">
+                                <div class="drive-indicator @GetIndicatorClass(disk)"></div>
+                                <span class="drive-name">/dev/@disk.Device</span>
+                                <span class="drive-status-text @GetDriveTextClass(disk)">
+                                    @GetDiskStatus(disk)
+                                </span>
+                            </div>
+
+                            @if (_smartData.TryGetValue(disk.Device, out var smart))
+                            {
+                                <div class="drive-divider"></div>
+
+                                <div class="drive-stat">
+                                    <span class="stat-label">CAPACITY</span>
+                                    <span class="stat-value">@(smart.Capacity ?? "—")</span>
+                                </div>
+                                <div class="drive-stat">
+                                    <span class="stat-label">SERIAL</span>
+                                    <span class="stat-value" style="font-size:9px;">@(smart.SerialNumber ?? "—")</span>
+                                </div>
+
+                                @if (smart.IsUsbEnclosure)
+                                {
+                                    <div style="margin-top:8px;">
+                                        <span class="usb-badge">USB · LIMITED SMART</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="drive-stat">
+                                        <span class="stat-label">TEMP</span>
+                                        <span class="stat-value" style="color:@GetTempColor(smart.Temperature)">
+                                            @smart.Temperature°C
+                                        </span>
+                                    </div>
+                                    <div class="drive-stat">
+                                        <span class="stat-label">HOURS</span>
+                                        <span class="stat-value">@smart.PowerOnHours.ToString("N0")</span>
+                                    </div>
+                                    <div class="drive-stat">
+                                        <span class="stat-label">REALLOC</span>
+                                        <span class="stat-value" style="color:@(smart.ReallocatedSectors > 0 ? "#ff3b3b" : "#888")">
+                                            @smart.ReallocatedSectors
+                                        </span>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
+
+                @if (array.SyncProgress != null)
+                {
+                    <div class="rebuild-section">
+                        <div class="rebuild-label">
+                            <span>⟳ REBUILD IN PROGRESS</span>
+                            <span>@array.SyncProgress.Percent%</span>
+                        </div>
+                        <div class="rebuild-bar-bg">
+                            <div class="rebuild-bar-fill" style="width:@(array.SyncProgress.Percent)%"></div>
+                        </div>
+                        <div class="rebuild-stats">
+                            <span class="rebuild-stat">SPEED: @array.SyncProgress.Speed</span>
+                            <span class="rebuild-stat">ETA: @array.SyncProgress.TimeRemaining</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+
+    @if (_selectedDisk != null && _selectedSmart != null)
+    {
+        <div class="detail-overlay" @onclick="CloseDetail">
+            <div class="detail-panel" @onclick:stopPropagation="true">
+                <button class="detail-close" @onclick="CloseDetail">ESC</button>
+
+                <div class="detail-title">/dev/@_selectedDisk.Device</div>
+                <div class="detail-subtitle">
+                    @GetDiskStatus(_selectedDisk) &nbsp;·&nbsp;
+                    @(_selectedSmart.IsUsbEnclosure ? "USB ENCLOSURE" : "DIRECT ATTACHED")
+                </div>
+
+                <!-- Identity -->
+                <div class="detail-section">
+                    <div class="detail-section-title">── Identity</div>
+                    <div class="detail-row">
+                        <span class="detail-key">Product</span>
+                        <span class="detail-val">@(_selectedSmart.ProductName ?? "—")</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-key">Serial Number</span>
+                        <span class="detail-val">@(_selectedSmart.SerialNumber ?? "—")</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-key">Capacity</span>
+                        <span class="detail-val">@(_selectedSmart.Capacity ?? "—")</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-key">Form Factor</span>
+                        <span class="detail-val">@(_selectedSmart.FormFactor ?? "—")</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-key">Block Size</span>
+                        <span class="detail-val">@(_selectedSmart.BlockSize ?? "—")</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-key">Interface</span>
+                        <span class="detail-val">@(_selectedSmart.IsUsbEnclosure ? "USB (SCSI passthrough)" : "SATA")</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-key">Unit ID</span>
+                        <span class="detail-val" style="font-size:9px;">@(_selectedSmart.LogicalUnitId ?? "—")</span>
+                    </div>
+                </div>
+
+                <!-- Health -->
+                <div class="detail-section">
+                    <div class="detail-section-title">── Health</div>
+                    <div class="detail-row">
+                        <span class="detail-key">SMART Status</span>
+                        @if (_selectedSmart.IsUsbEnclosure)
+                        {
+                            <span class="detail-val health-warn">LIMITED (USB)</span>
+                        }
+                        else
+                        {
+                            <span class="detail-val @(_selectedSmart.IsHealthy ? "health-good" : "health-bad")">
+                                @(_selectedSmart.IsHealthy ? "PASSED" : "FAILED")
+                            </span>
+                        }
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-key">Array Role</span>
+                        <span class="detail-val @GetDriveTextClass(_selectedDisk)">
+                            @GetDiskStatus(_selectedDisk)
+                        </span>
+                    </div>
+                    @if (!_selectedSmart.IsUsbEnclosure)
+                    {
+                        <div class="detail-row">
+                            <span class="detail-key">Temperature</span>
+                            <span class="detail-val @GetTempClass(_selectedSmart.Temperature)">
+                                @_selectedSmart.Temperature°C
+                            </span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-key">Reallocated Sectors</span>
+                            <span class="detail-val @(_selectedSmart.ReallocatedSectors > 0 ? "health-bad" : "health-good")">
+                                @_selectedSmart.ReallocatedSectors
+                            </span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-key">Power On Hours</span>
+                            <span class="detail-val">@_selectedSmart.PowerOnHours.ToString("N0") hrs</span>
+                        </div>
+                    }
+                    @if (_selectedSmart.ReadCacheEnabled.HasValue)
+                    {
+                        <div class="detail-row">
+                            <span class="detail-key">Read Cache</span>
+                            <span class="detail-val @(_selectedSmart.ReadCacheEnabled.Value ? "health-good" : "")">
+                                @(_selectedSmart.ReadCacheEnabled.Value ? "ENABLED" : "DISABLED")
+                            </span>
+                        </div>
+                    }
+                    @if (_selectedSmart.WriteCacheEnabled.HasValue)
+                    {
+                        <div class="detail-row">
+                            <span class="detail-key">Write Cache</span>
+                            <span class="detail-val @(_selectedSmart.WriteCacheEnabled.Value ? "health-good" : "")">
+                                @(_selectedSmart.WriteCacheEnabled.Value ? "ENABLED" : "DISABLED")
+                            </span>
+                        </div>
+                    }
+                </div>
+
+                @if (_selectedSmart.IsUsbEnclosure)
+                {
+                    <div class="detail-section">
+                        <div class="detail-section-title">── Note</div>
+                        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#444;line-height:1.7;">
+                            Full SMART data unavailable — drive is connected via a USB enclosure
+                            that does not pass through ATA commands. Identity and capacity data
+                            is sourced via SCSI passthrough.
+                        </div>
+                    </div>
+                }
+
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private DiskInfo? _selectedDisk;
+    private SmartInfo? _selectedSmart;
+    private List<ArrayInfo> _arrays = [];
+    private Dictionary<string, SmartInfo> _smartData = [];
+    private bool _loading = true;
+    private string? _error;
+    private DateTime _lastUpdated = DateTime.Now;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _arrays = await Http.GetFromJsonAsync<List<ArrayInfo>>("api/arrays") ?? [];
+
+            foreach (var array in _arrays)
+                foreach (var disk in array.Disks)
+                    try
+                    {
+                        var smart = await Http.GetFromJsonAsync<SmartInfo>(
+                            $"api/arrays/{array.Name}/disks/{disk.Device}/smart");
+                        if (smart != null)
+                            _smartData[disk.Device] = smart;
+                    }
+                    catch { }
+
+            _lastUpdated = DateTime.Now;
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private string GetStateBadgeClass(string state) => state switch
+    {
+        "active"     => "state-active",
+        "degraded"   => "state-degraded",
+        "recovering" => "state-recovering",
+        _            => "state-active"
+    };
+
+    private string GetDriveCardClass(DiskInfo disk)
+    {
+        if (disk.IsFaulty) return "drive-faulty";
+        if (!disk.IsActive) return "drive-spare";
+        return "drive-active";
+    }
+
+    private string GetIndicatorClass(DiskInfo disk)
+    {
+        if (disk.IsFaulty) return "indicator-faulty";
+        if (!disk.IsActive) return "indicator-spare";
+        return "indicator-active";
+    }
+
+    private string GetDriveTextClass(DiskInfo disk)
+    {
+        if (disk.IsFaulty) return "text-faulty";
+        if (!disk.IsActive) return "text-spare";
+        return "text-active";
+    }
+
+    private string GetDiskStatus(DiskInfo disk)
+    {
+        if (disk.IsFaulty) return "FAULTY";
+        if (!disk.IsActive) return "SPARE";
+        return "ACTIVE";
+    }
+
+    private string GetTempColor(int temp) => temp switch
+    {
+        > 55 => "#ff3b3b",
+        > 45 => "#ffa800",
+        _    => "#888"
+    };
+
+     private void OpenDetail(DiskInfo disk)
+    {
+        _selectedDisk = disk;
+        _smartData.TryGetValue(disk.Device, out _selectedSmart);
+    }
+
+    private void CloseDetail()
+    {
+        _selectedDisk = null;
+        _selectedSmart = null;
+    }
+
+    private string GetTempClass(int temp) => temp switch
+    {
+        > 55 => "health-bad",
+        > 45 => "health-warn",
+        _    => ""
+    };
+}

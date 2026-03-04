@@ -1,6 +1,36 @@
-﻿<Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+﻿@using MudBlazor
+
+<MudThemeProvider Theme="@_darkTheme" IsDarkMode="true" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
+    <NotFound>
+        <PageTitle>Not found</PageTitle>
+        <MudText>Sorry, there's nothing at this address.</MudText>
+    </NotFound>
 </Router>
+
+@code {
+    private MudTheme _darkTheme = new MudTheme
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#90caf9",
+            Background = "#121212",
+            Surface = "#1e1e1e",
+        },
+        PaletteDark = new PaletteDark
+        {
+            Primary = "#90caf9",
+            Background = "#121212",
+            Surface = "#1e1e1e",
+            AppbarBackground = "#1a1a2e",
+        }
+    };
+}
