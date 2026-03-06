@@ -453,7 +453,22 @@
             RAID MONITOR · ONLINE
         </span>
         <span>LAST UPDATED @_lastUpdated.ToString("HH:mm:ss")</span>
-        <span>@_arrays.Count ARRAY@(_arrays.Count != 1 ? "S" : "") DETECTED</span>
+        <span style="display:flex;align-items:center;gap:12px;">
+            @_arrays.Count ARRAY@(_arrays.Count != 1 ? "S" : "") DETECTED
+            <button @onclick="Refresh" style="
+                background: rgba(0,255,136,0.08);
+                border: 1px solid rgba(0,255,136,0.25);
+                border-radius: 5px;
+                color: #00ff88;
+                font-family: 'JetBrains Mono', monospace;
+                font-size: 10px;
+                letter-spacing: 0.1em;
+                padding: 4px 12px;
+                cursor: pointer;
+                transition: all 0.15s;">
+                ↻ REFRESH
+            </button>
+        </span>
     </div>
 
     @if (_loading)
@@ -750,6 +765,16 @@
         {
             _loading = false;
         }
+    }
+
+    private async Task Refresh()
+    {
+        _loading = true;
+        _error = null;
+        _arrays = [];
+        _smartData = [];
+        StateHasChanged();
+        await OnInitializedAsync();
     }
 
     private string GetStateBadgeClass(string state) => state switch
