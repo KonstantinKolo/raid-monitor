@@ -434,6 +434,12 @@
         color: #fff;
     }
 
+    .state-offline {
+        background: rgba(100,100,100,0.08);
+        border: 1px solid rgba(100,100,100,0.25);
+        color: #666;
+    }
+
     .health-good { color: #00ff88; }
     .health-warn { color: #ffa800; }
     .health-bad  { color: #ff3b3b; }
@@ -485,6 +491,28 @@
                         <span class="state-dot"></span>
                         @array.State.ToUpper()
                     </div>
+                    @if (array.Encryption != null)
+                    {
+                        <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
+                            <div style="
+                                display:inline-flex;align-items:center;gap:7px;
+                                padding:5px 12px;border-radius:6px;
+                                font-family:'JetBrains Mono',monospace;
+                                font-size:10px;font-weight:700;letter-spacing:0.1em;
+                                background:@(array.Encryption.IsUnlocked ? "rgba(144,202,249,0.08)" : "rgba(255,168,0,0.08)");
+                                border:1px solid @(array.Encryption.IsUnlocked ? "rgba(144,202,249,0.25)" : "rgba(255,168,0,0.3)");
+                                color:@(array.Encryption.IsUnlocked ? "#90caf9" : "#ffa800");">
+                                <span style="font-size:13px;">@(array.Encryption.IsUnlocked ? "🔓" : "🔒")</span>
+                                @(array.Encryption.IsUnlocked ? "UNLOCKED" : "LOCKED") · @(array.Encryption.Type?.ToUpper() ?? "ENCRYPTED")
+                            </div>
+                            @if (array.Encryption.MountPoint != null)
+                            {
+                                <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#444;">
+                                    → @array.Encryption.MountPoint
+                                </span>
+                            }
+                        </div>
+                    }
                 </div>
 
                 <div class="section-label">── Drive Status</div>
@@ -726,10 +754,11 @@
 
     private string GetStateBadgeClass(string state) => state switch
     {
-        "active"     => "state-active",
-        "degraded"   => "state-degraded",
-        "recovering" => "state-recovering",
-        _            => "state-active"
+        "active"          => "state-active",
+        "degraded"        => "state-degraded",
+        "recovering"      => "state-recovering",
+        "offline"         => "state-offline",
+        _                 => "state-active"
     };
 
     private string GetDriveCardClass(DiskInfo disk)

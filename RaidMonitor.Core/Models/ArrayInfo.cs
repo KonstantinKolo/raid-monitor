@@ -7,6 +7,7 @@ public class ArrayInfo
     public string RaidLevel { get; set; } = "";
     public List<DiskInfo> Disks { get; set; } = [];
     public SyncProgress? SyncProgress { get; set; } // null if not resyncing
+    public EncryptionInfo? Encryption { get; set; }
 }
 
 public class DiskInfo

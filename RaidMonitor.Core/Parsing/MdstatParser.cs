@@ -13,14 +13,14 @@ public static class MdstatParser
         for (int i = 0; i < lines.Length; i++)
         {
             var arrayMatch = Regex.Match(lines[i],
-                @"^(md\d+)\s+:\s+(\w+)\s+(raid\d+|linear|multipath|faulty)\s+(.+)$");
+                @"^(md\d+)\s+:\s+([\w\s\(\)-]+?)\s+(raid\d+|linear|multipath|faulty)\s+(.+)$");
 
             if (!arrayMatch.Success) continue;
 
             var array = new ArrayInfo
             {
                 Name = arrayMatch.Groups[1].Value,
-                State = arrayMatch.Groups[2].Value,
+                State = arrayMatch.Groups[2].Value.Trim().Replace("(", "").Replace(")", ""),
                 RaidLevel = arrayMatch.Groups[3].Value,
                 Disks = ParseDisks(arrayMatch.Groups[4].Value)
             };
