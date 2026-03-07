@@ -8,6 +8,13 @@ public class ArrayInfo
     public List<DiskInfo> Disks { get; set; } = [];
     public SyncProgress? SyncProgress { get; set; } // null if not resyncing
     public EncryptionInfo? Encryption { get; set; }
+
+    // Populated from mdadm --detail
+    public string? Uuid { get; set; }
+    public string? CreationTime { get; set; }
+    public string? UpdateTime { get; set; }
+    public string? ArraySize { get; set; }
+    public string? ChunkSize { get; set; } // null for RAID1
 }
 
 public class DiskInfo

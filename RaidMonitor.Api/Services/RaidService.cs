@@ -38,6 +38,16 @@ public class RaidService
         }
         catch { }
 
+        await Task.WhenAll(arrays.Select(async array =>
+        {
+            try
+            {
+                var detail = await RunCommandAsync("/sbin/mdadm", $"--detail /dev/{array.Name}");
+                MdadmDetailParser.EnrichArray(array, detail);
+            }
+            catch { }
+        }));
+
         return arrays;
     }
 

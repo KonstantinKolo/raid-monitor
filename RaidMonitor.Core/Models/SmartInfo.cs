@@ -11,7 +11,6 @@ public class SmartInfo
     public bool IsUsbEnclosure { get; set; }
     public string? SerialNumber { get; set; }
     public string? Capacity { get; set; }
-    public string LimitationNote { get; set; } = "";
     public string? ProductName { get; set; }
     public string? FormFactor { get; set; }
     public string? LogicalUnitId { get; set; }

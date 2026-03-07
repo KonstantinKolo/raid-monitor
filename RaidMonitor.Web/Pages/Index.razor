@@ -530,6 +530,44 @@
                     }
                 </div>
 
+                @if (array.ArraySize != null || array.Uuid != null || array.CreationTime != null || array.ChunkSize != null)
+                {
+                    <div style="
+                        display:flex;flex-wrap:wrap;gap:20px;
+                        padding:12px 0 20px;
+                        border-bottom:1px solid rgba(255,255,255,0.04);
+                        margin-bottom:20px;">
+                        @if (array.ArraySize != null)
+                        {
+                            <div>
+                                <div class="section-label" style="margin-bottom:3px;">SIZE</div>
+                                <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#888;">@array.ArraySize</div>
+                            </div>
+                        }
+                        @if (array.ChunkSize != null)
+                        {
+                            <div>
+                                <div class="section-label" style="margin-bottom:3px;">CHUNK</div>
+                                <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#888;">@array.ChunkSize</div>
+                            </div>
+                        }
+                        @if (array.CreationTime != null)
+                        {
+                            <div>
+                                <div class="section-label" style="margin-bottom:3px;">CREATED</div>
+                                <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#888;">@array.CreationTime</div>
+                            </div>
+                        }
+                        @if (array.Uuid != null)
+                        {
+                            <div>
+                                <div class="section-label" style="margin-bottom:3px;">UUID</div>
+                                <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#555;">@array.Uuid</div>
+                            </div>
+                        }
+                    </div>
+                }
+
                 <div class="section-label">── Drive Status</div>
                 <div class="drives-grid">
                     @foreach (var disk in array.Disks)
@@ -606,7 +644,7 @@
         }
     }
 
-    @if (_selectedDisk != null && _selectedSmart != null)
+    @if (_selectedDisk != null)
     {
         <div class="detail-overlay" @onclick="CloseDetail">
             <div class="detail-panel" @onclick:stopPropagation="true">
@@ -615,8 +653,17 @@
                 <div class="detail-title">/dev/@_selectedDisk.Device</div>
                 <div class="detail-subtitle">
                     @GetDiskStatus(_selectedDisk) &nbsp;·&nbsp;
-                    @(_selectedSmart.IsUsbEnclosure ? "USB ENCLOSURE" : "DIRECT ATTACHED")
+                    @(_selectedSmart?.IsUsbEnclosure == true ? "USB ENCLOSURE" : "DIRECT ATTACHED")
                 </div>
+
+                @if (_selectedSmart == null)
+                {
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#444;padding:32px 0;text-align:center;letter-spacing:0.12em;">
+                        SMART DATA UNAVAILABLE
+                    </div>
+                }
+                else
+                {
 
                 <!-- Identity -->
                 <div class="detail-section">
@@ -724,6 +771,8 @@
                     </div>
                 }
 
+                } @* end else *@
+
             </div>
         </div>
     }
@@ -744,16 +793,9 @@
         {
             _arrays = await Http.GetFromJsonAsync<List<ArrayInfo>>("api/arrays") ?? [];
 
-            foreach (var array in _arrays)
-                foreach (var disk in array.Disks)
-                    try
-                    {
-                        var smart = await Http.GetFromJsonAsync<SmartInfo>(
-                            $"api/arrays/{array.Name}/disks/{disk.Device}/smart");
-                        if (smart != null)
-                            _smartData[disk.Device] = smart;
-                    }
-                    catch { }
+            var smartTasks = _arrays
+                .SelectMany(a => a.Disks.Select(d => FetchSmartAsync(a.Name, d.Device)));
+            await Task.WhenAll(smartTasks);
 
             _lastUpdated = DateTime.Now;
         }
@@ -765,6 +807,18 @@
         {
             _loading = false;
         }
+    }
+
+    private async Task FetchSmartAsync(string arrayName, string device)
+    {
+        try
+        {
+            var smart = await Http.GetFromJsonAsync<SmartInfo>(
+                $"api/arrays/{arrayName}/disks/{device}/smart");
+            if (smart != null)
+                _smartData[device] = smart;
+        }
+        catch { }
     }
 
     private async Task Refresh()

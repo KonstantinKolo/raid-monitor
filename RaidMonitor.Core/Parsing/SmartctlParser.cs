@@ -13,7 +13,6 @@ public static class SmartctlParser
         if (smartctlOutput.Contains("SMART support is:     Unavailable"))
         {
             info.IsUsbEnclosure = true;
-            info.LimitationNote = "Limited SMART data — USB enclosure detected";
             info.IsHealthy = true; // assume healthy if no explicit failure
         }
 
@@ -60,7 +59,7 @@ public static class SmartctlParser
             if (productMatch.Success)
                 info.ProductName = productMatch.Groups[1].Value.Trim();
 
-           var formMatch = Regex.Match(line, @"Form Factor:\s+(.+)");
+            var formMatch = Regex.Match(line, @"Form Factor:\s+(.+)");
             if (formMatch.Success)
                 info.FormFactor = formMatch.Groups[1].Value.Trim();
 

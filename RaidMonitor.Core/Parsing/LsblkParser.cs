@@ -27,7 +27,7 @@ public static class LsblkParser
         return null;
     }
 
-   private static EncryptionInfo? SearchDevice(string arrayName, JsonElement device)
+    private static EncryptionInfo? SearchDevice(string arrayName, JsonElement device)
     {
         var name = device.TryGetProperty("name", out var n) ? n.GetString() : null;
         var fstype = device.TryGetProperty("fstype", out var ft) ? ft.GetString() : null;
@@ -70,20 +70,4 @@ public static class LsblkParser
 
     private static bool IsCryptFstype(string? fstype) =>
         fstype is "crypto_LUKS" or "plain" or "bitlk" or "fvault2";
-
-    private static EncryptionInfo BuildEncryptionInfo(JsonElement device, string? fstype, bool isUnlocked)
-    {
-        var name = device.TryGetProperty("name", out var n) ? n.GetString() : null;
-        var mountpoint = device.TryGetProperty("mountpoint", out var mp) ? mp.GetString() : null;
-        var type = device.TryGetProperty("type", out var t) ? t.GetString() : null;
-
-        return new EncryptionInfo
-        {
-            IsEncrypted = true,
-            Type = fstype ?? type,
-            MappedName = name,
-            MountPoint = mountpoint,
-            IsUnlocked = isUnlocked || type == "crypt" || !string.IsNullOrEmpty(mountpoint)
-        };
-    }
 }
