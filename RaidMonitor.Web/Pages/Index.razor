@@ -2,6 +2,7 @@
 @using MudBlazor
 @using RaidMonitor.Core.Models
 @inject HttpClient Http
+@implements IAsyncDisposable
 
 <PageTitle>RAID Monitor</PageTitle>
 
@@ -449,8 +450,8 @@
 
     <div class="status-bar">
         <span>
-            <span class="dot"></span>
-            RAID MONITOR · ONLINE
+            <span class="dot" style="background:@GetConnectionColor();box-shadow:0 0 8px @GetConnectionColor();"></span>
+            RAID MONITOR · @GetConnectionLabel()
         </span>
         <span>LAST UPDATED @_lastUpdated.ToString("HH:mm:ss")</span>
         <span style="display:flex;align-items:center;gap:12px;">
@@ -779,6 +780,7 @@
 </div>
 
 @code {
+    private HubConnection? _hub;
     private DiskInfo? _selectedDisk;
     private SmartInfo? _selectedSmart;
     private List<ArrayInfo> _arrays = [];
@@ -789,24 +791,44 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _hub = new HubConnectionBuilder()
+            .WithUrl("http://localhost:5291/hubs/raid")
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hub.On<List<ArrayInfo>>("ArraysUpdated", async arrays =>
+        {
+            _arrays = arrays;
+            _lastUpdated = DateTime.Now;
+            _loading = false;
+            _error = null;
+            await InvokeAsync(StateHasChanged);
+            await FetchSmartForNewDrivesAsync(arrays);
+        });
+
+        _hub.Reconnecting += _ => { InvokeAsync(StateHasChanged); return Task.CompletedTask; };
+        _hub.Reconnected += _ => { InvokeAsync(StateHasChanged); return Task.CompletedTask; };
+        _hub.Closed += _ => { InvokeAsync(StateHasChanged); return Task.CompletedTask; };
+
         try
         {
-            _arrays = await Http.GetFromJsonAsync<List<ArrayInfo>>("api/arrays") ?? [];
-
-            var smartTasks = _arrays
-                .SelectMany(a => a.Disks.Select(d => FetchSmartAsync(a.Name, d.Device)));
-            await Task.WhenAll(smartTasks);
-
-            _lastUpdated = DateTime.Now;
+            await _hub.StartAsync();
         }
         catch (Exception ex)
         {
             _error = ex.Message;
-        }
-        finally
-        {
             _loading = false;
         }
+    }
+
+    private async Task FetchSmartForNewDrivesAsync(List<ArrayInfo> arrays)
+    {
+        var tasks = arrays
+            .SelectMany(a => a.Disks
+                .Where(d => !_smartData.ContainsKey(d.Device))
+                .Select(d => FetchSmartAsync(a.Name, d.Device)));
+        await Task.WhenAll(tasks);
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task FetchSmartAsync(string arrayName, string device)
@@ -823,12 +845,17 @@
 
     private async Task Refresh()
     {
+        if (_hub?.State != HubConnectionState.Connected) return;
         _loading = true;
-        _error = null;
-        _arrays = [];
         _smartData = [];
         StateHasChanged();
-        await OnInitializedAsync();
+        await _hub.InvokeAsync("GetArrays");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hub != null)
+            await _hub.DisposeAsync();
     }
 
     private string GetStateBadgeClass(string state) => state switch
@@ -892,5 +919,19 @@
         > 55 => "health-bad",
         > 45 => "health-warn",
         _    => ""
+    };
+
+    private string GetConnectionColor() => _hub?.State switch
+    {
+        HubConnectionState.Connected    => "#00ff88",
+        HubConnectionState.Reconnecting => "#ffa800",
+        _                               => "#ff3b3b"
+    };
+
+    private string GetConnectionLabel() => _hub?.State switch
+    {
+        HubConnectionState.Connected    => "ONLINE",
+        HubConnectionState.Reconnecting => "RECONNECTING",
+        _                               => "OFFLINE"
     };
 }
