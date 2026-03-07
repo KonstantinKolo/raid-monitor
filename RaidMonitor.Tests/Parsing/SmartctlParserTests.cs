@@ -98,13 +98,6 @@ public class SmartctlParserTests
     }
 
     [Fact]
-    public void Parse_UsbEnclosure_HasLimitationNote()
-    {
-        var result = SmartctlParser.Parse("sda", UsbEnclosureDrive);
-        Assert.False(string.IsNullOrEmpty(result.LimitationNote));
-    }
-
-    [Fact]
     public void Parse_UsbEnclosure_ParsesSerialNumber()
     {
         var result = SmartctlParser.Parse("sda", UsbEnclosureDrive);

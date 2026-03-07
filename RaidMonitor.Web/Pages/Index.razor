@@ -2,6 +2,7 @@
 @using MudBlazor
 @using RaidMonitor.Core.Models
 @inject HttpClient Http
+@inject NavigationManager Navigation
 @implements IAsyncDisposable
 
 <PageTitle>RAID Monitor</PageTitle>
@@ -792,7 +793,7 @@
     protected override async Task OnInitializedAsync()
     {
         _hub = new HubConnectionBuilder()
-            .WithUrl("http://localhost:5291/hubs/raid")
+            .WithUrl(Navigation.ToAbsoluteUri("/hubs/raid"))
             .WithAutomaticReconnect()
             .Build();
 

@@ -1,0 +1,16 @@
+[Unit]
+Description=RAID Monitor — Linux software RAID health dashboard
+After=network.target
+
+[Service]
+Type=notify
+WorkingDirectory=/opt/raidmonitor
+ExecStart=/usr/bin/dotnet /opt/raidmonitor/RaidMonitor.Api.dll
+Restart=on-failure
+RestartSec=5
+User=root
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://localhost:5291
+
+[Install]
+WantedBy=multi-user.target

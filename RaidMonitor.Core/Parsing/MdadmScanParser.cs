@@ -12,7 +12,7 @@ public static class MdadmScanParser
         foreach (var line in scanOutput.Split('\n'))
         {
             var match = Regex.Match(line,
-                @"ARRAY\s+/dev/(?:md/|md)(\w+)\s+.*UUID=(\S+)");
+                @"ARRAY\s+/dev/(?:md/|md)(\w+)\s+");
             if (!match.Success) continue;
 
             var levelMatch = Regex.Match(line, @"level=(\S+)");

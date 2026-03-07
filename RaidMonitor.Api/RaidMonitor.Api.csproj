@@ -8,10 +8,12 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="10.0.3" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\RaidMonitor.Core\RaidMonitor.Core.csproj" />
+    <ProjectReference Include="..\RaidMonitor.Web\RaidMonitor.Web.csproj" />
   </ItemGroup>
 
 </Project>

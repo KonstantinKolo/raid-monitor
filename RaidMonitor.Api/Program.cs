@@ -2,6 +2,7 @@ using RaidMonitor.Api.Hubs;
 using RaidMonitor.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSystemd();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -25,6 +26,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
 app.UseCors();
+app.MapStaticAssets();
 app.MapControllers();
 app.MapHub<RaidHub>("/hubs/raid");
+app.MapFallbackToFile("index.html");
 app.Run();
