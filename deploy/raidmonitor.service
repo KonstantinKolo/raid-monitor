@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=notify
 WorkingDirectory=/opt/raidmonitor
-ExecStart=/usr/bin/dotnet /opt/raidmonitor/RaidMonitor.Api.dll
+ExecStart=/opt/raidmonitor/RaidMonitor.Api
 Restart=on-failure
 RestartSec=5
 User=root
